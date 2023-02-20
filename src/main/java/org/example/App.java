@@ -24,6 +24,6 @@ public class App
         Object jsonObj = parser.parse(reader);
         JSONObject jsonObject = (JSONObject) jsonObj;
 
-        System.out.println(((JSONObject) jsonObj).get("instance_name"));
+        System.out.println(((JSONObject) jsonObj).get("patients"));
     }
 }
