@@ -40,12 +40,33 @@ public class Individual {
         return travelTimes;
     }
 
+    public float getTotalTravelTime(){
+        float sum = 0;
+        for(float d : this.travelTimes)
+            sum += d;
+        return sum;
+    }
+
     public List<Float> getDurationTimes() {
         return durationTimes;
     }
 
+    public float getTotalDurationTime(){
+        float sum = 0;
+        for(float d : this.durationTimes)
+            sum += d;
+        return sum;
+    }
+
     public List<Float> getTimeWindowViolations() {
         return timeWindowViolations;
+    }
+
+    public float getTotalTimeWindowViolation(){
+        float sum = 0;
+        for(float d : this.timeWindowViolations)
+            sum += d;
+        return sum;
     }
 
     public float getDepotReturnTime() {

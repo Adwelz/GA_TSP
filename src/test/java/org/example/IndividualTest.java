@@ -15,5 +15,9 @@ public class IndividualTest extends TestCase {
         System.out.println(individual.getNursesDemands());
         System.out.println(individual.getTimeWindowViolations());
         System.out.println(individual.getTravelTimes());
+        System.out.println(individual.getAllocatablePatients());
+        System.out.println(individual.getTotalDurationTime());
+        System.out.println(individual.getTotalTravelTime());
+        System.out.println(individual.getTotalTimeWindowViolation());
     }
 }
