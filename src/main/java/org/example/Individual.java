@@ -8,6 +8,8 @@ import java.util.Collections;
 import java.util.List;
 
 public class Individual {
+    JsonUtils jsonUtils = JsonUtils.getInstance();
+
     private float depotReturnTime;
 
     private int nbrNurses;
@@ -19,6 +21,14 @@ public class Individual {
     private List<List<Integer>> nursesPaths = new ArrayList<>();
 
     private List<Integer> allocatablePatients = new ArrayList<>();
+
+    private float travelTime;
+
+    private float durationTime;
+
+    private List<List<Float>> expectedTimeWindows = new ArrayList<>();
+
+    private List<List<Float>> actualTimeWindows = new ArrayList<>();
 
     private List<Integer> nursesDemands = new ArrayList<>();
 
@@ -87,9 +97,41 @@ public class Individual {
         return list;
     }
 
-    public Individual() throws IOException, ParseException {
-        JsonUtils jsonUtils = JsonUtils.getInstance();
+    List<Float> getTimeWindowOfTheNextPatient(int currentPatient, int nextPatient, float currentPatientEndTime) {
+        float actualStartTime=currentPatientEndTime + jsonUtils.getTravelTime(currentPatient, nextPatient);
+        // float timeWindowViolation =0;
 
+        float expectedStartTime = jsonUtils.getPatientStartTime(nextPatient);
+
+        /*if (actualStartTime < expectedStartTime){
+            timeWindowViolation += expectedStartTime - actualStartTime;
+        }*/
+
+        float actualEndTime = actualStartTime;
+        if (actualStartTime < expectedStartTime) {
+            float waitingTime = expectedStartTime - actualStartTime;
+            actualEndTime += waitingTime + jsonUtils.getPatientCareTime(nextPatient);
+        }
+        else {
+            actualEndTime += jsonUtils.getPatientCareTime(nextPatient);
+        }
+
+        /*if (actualEndTime > expectedEndTime) {
+            timeWindowViolation += actualEndTime - expectedEndTime;
+        }*/
+
+        List<Float> StartTimeAndEndTimeOfTheNextPatient = new ArrayList<>();
+
+        StartTimeAndEndTimeOfTheNextPatient.add(actualStartTime);
+
+        StartTimeAndEndTimeOfTheNextPatient.add(actualEndTime);
+
+        // StartTimeAndEndTimeOfTheNextPatient.add(timeWindowViolation);
+
+        return StartTimeAndEndTimeOfTheNextPatient;
+    }
+
+    public Individual() throws IOException, ParseException {
         this.nbrNurses = jsonUtils.getNbrNurses();
         this.capacityNurse = jsonUtils.getCapacityNurses();
         this.depotReturnTime = jsonUtils.getReturnTime();
@@ -103,63 +145,95 @@ public class Individual {
             int nurseDemands = 0;
 
             float travelTime = 0;
-            float durationTime = 0;
-            float timeWindowViolation = 0;
-
-            List<Float> durationTimeAndTimeWindowViolation =new ArrayList<>();
+            float currentPatientEndTime = 0;
 
             do {
 
-                int previousPatient;
+                int currentPatient;
+                int nextPatient;
 
-                int currentPatient = allocatablePatients.remove(0);
-
-                if(!nurseRoute.isEmpty()) {
-                    previousPatient = nurseRoute.get(nurseRoute.size() - 1);
+                if(!allocatablePatients.isEmpty()) {
+                    nextPatient = allocatablePatients.remove(0);
                 }
                 else {
-                    previousPatient = 0;
-                    travelTime += jsonUtils.getTravelTime(0,currentPatient);
+                    break;
                 }
 
-                nurseRoute.add(currentPatient);
+                if(!nurseRoute.isEmpty()) {
+                    currentPatient = nurseRoute.get(nurseRoute.size() - 1);
+                }
+                else {
+                    currentPatient = 0;
+                    travelTime += jsonUtils.getTravelTime(0,nextPatient);
+                }
 
-                nurseDemands += jsonUtils.getPatientDemand(currentPatient);
+                nurseRoute.add(nextPatient);
 
-                durationTimeAndTimeWindowViolation = jsonUtils.getDurationTimeAndTimeViolationForOneStep(previousPatient,currentPatient,durationTime);
+                nurseDemands += jsonUtils.getPatientDemand(nextPatient);
 
-                travelTime += jsonUtils.getTravelTime(previousPatient,currentPatient);
+                List<Float> expectedTimeWindow = new ArrayList<>();
 
-                durationTime +=durationTimeAndTimeWindowViolation.get(0);
+                expectedTimeWindow.add(jsonUtils.getPatientStartTime(nextPatient));
+                expectedTimeWindow.add(jsonUtils.getPatientEndTime(nextPatient));
 
-                timeWindowViolation +=durationTimeAndTimeWindowViolation.get(1);
+                expectedTimeWindows.add(expectedTimeWindow);
+
+                List<Float> actualTimeWindow = getTimeWindowOfTheNextPatient(currentPatient,nextPatient,currentPatientEndTime);
+
+                actualTimeWindows.add(actualTimeWindow);
+
+                currentPatientEndTime = actualTimeWindow.get(1);
+
+                travelTime += jsonUtils.getTravelTime(currentPatient,nextPatient);
             }
-            while(nurseDemands<this.capacityNurse & !allocatablePatients.isEmpty() & (durationTime + jsonUtils.getTravelTime(nurseRoute.get(nurseRoute.size() - 1),0)) <this.depotReturnTime);
+            while(nurseDemands<this.capacityNurse & !allocatablePatients.isEmpty() & (currentPatientEndTime + jsonUtils.getTravelTime(nurseRoute.get(nurseRoute.size() - 1),0)) <this.depotReturnTime);
 
-            int unauthorisedPatient = nurseRoute.remove(nurseRoute.size()-1);
+            int lastPatient = 0;
 
-            int LastPatient = nurseRoute.get(nurseRoute.size()-1);
+            if(nurseRoute.isEmpty()){
+                nursesDemands.add(0);
+                travelTimes.add(0f);
+                durationTimes.add(0f);
 
-            allocatablePatients.add(unauthorisedPatient);
+                nursesPaths.add(nurseRoute);
+            }
+            else {
+                if ((currentPatientEndTime + jsonUtils.getTravelTime(nurseRoute.get(nurseRoute.size() - 1), 0)) < this.depotReturnTime) {
+                    lastPatient = nurseRoute.get(nurseRoute.size() - 1);
+                }
+                else {
+                    int unauthorisedPatient = nurseRoute.remove(nurseRoute.size() - 1);
 
-            nurseDemands -= jsonUtils.getPatientDemand(unauthorisedPatient);
+                    allocatablePatients.add(unauthorisedPatient);
 
-            travelTime -= jsonUtils.getTravelTime(LastPatient,unauthorisedPatient);
+                    expectedTimeWindows.remove(expectedTimeWindows.size() - 1);
 
-            durationTime -= durationTimeAndTimeWindowViolation.get(0);
+                    actualTimeWindows.remove(actualTimeWindows.size() - 1);
 
-            timeWindowViolation -=durationTimeAndTimeWindowViolation.get(1);
+                    lastPatient = nurseRoute.get(nurseRoute.size() - 1);
 
-            travelTime += jsonUtils.getTravelTime(LastPatient,0);
-            durationTime += jsonUtils.getTravelTime(LastPatient,0);
+                    nurseDemands -= jsonUtils.getPatientDemand(unauthorisedPatient);
 
-            nursesDemands.add(nurseDemands);
-            travelTimes.add(travelTime);
-            durationTimes.add(durationTime);
-            timeWindowViolations.add(timeWindowViolation);
+                    travelTime -= jsonUtils.getTravelTime(lastPatient, unauthorisedPatient);
+                }
 
-            nursesPaths.add(nurseRoute);
+                float lastPatienEndTime = actualTimeWindows.get(actualTimeWindows.size() - 1).get(1);
 
+                travelTime += jsonUtils.getTravelTime(lastPatient, 0);
+                float endTime = lastPatienEndTime + jsonUtils.getTravelTime(lastPatient, 0);
+
+                nursesDemands.add(nurseDemands);
+                travelTimes.add(travelTime);
+                durationTimes.add(endTime);
+
+                nursesPaths.add(nurseRoute);
+            }
     }
 }
+
+    private float getDurationTime(List<Integer> nursePath){
+        float duration = 0 ;
+
+        return duration;
+    }
 }

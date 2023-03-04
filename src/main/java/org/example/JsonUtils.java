@@ -94,27 +94,32 @@ public class JsonUtils {
     }
 
     List<Float> getDurationTimeAndTimeViolationForOneStep(int previousPatient, int currentPatient, float previousDurationTime) {
-        float durationTime=previousDurationTime + getTravelTime(previousPatient, currentPatient);
+        float actualStartTime=previousDurationTime + getTravelTime(previousPatient, currentPatient);
         float timeWindowViolation =0;
 
-        float patientStartTime = getPatientStartTime(currentPatient);
-        float patientEndTime = getPatientEndTime(currentPatient);
+        float expectedStartTime = getPatientStartTime(currentPatient);
+        float expectedEndTime = getPatientEndTime(currentPatient);
 
-
-        if (durationTime > patientEndTime) {
-            timeWindowViolation = durationTime-patientEndTime;
+        if (actualStartTime < expectedStartTime){
+            timeWindowViolation = expectedStartTime - actualStartTime;
         }
 
-        if (patientStartTime > durationTime) {
-            durationTime += patientStartTime - durationTime + getPatientCareTime(currentPatient);
+        float actualEndTime = actualStartTime;
+        if (actualStartTime > expectedStartTime) {
+            float waitingTime = actualStartTime - expectedStartTime;
+            actualEndTime += waitingTime + getPatientCareTime(currentPatient);
         }
         else {
-            durationTime += getPatientCareTime(currentPatient);
+            actualEndTime += getPatientCareTime(currentPatient);
+        }
+
+        if (actualEndTime > expectedEndTime) {
+            timeWindowViolation = actualEndTime - expectedEndTime;
         }
 
         List<Float> durationTimeAndTimeWindowViolation = new ArrayList<>();
 
-        durationTimeAndTimeWindowViolation.add(durationTime);
+        durationTimeAndTimeWindowViolation.add(actualEndTime);
 
         durationTimeAndTimeWindowViolation.add(timeWindowViolation);
 

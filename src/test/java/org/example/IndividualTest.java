@@ -9,15 +9,7 @@ public class IndividualTest extends TestCase {
 
     public void testGetAllocatablePatients() throws IOException, ParseException {
         Individual individual = new Individual();
-        System.out.println(individual.getDurationTimes());
-        System.out.println(individual.getDepotReturnTime());
         System.out.println(individual.getNursesPaths());
-        System.out.println(individual.getNursesDemands());
-        System.out.println(individual.getTimeWindowViolations());
-        System.out.println(individual.getTravelTimes());
-        System.out.println(individual.getAllocatablePatients());
-        System.out.println(individual.getTotalDurationTime());
-        System.out.println(individual.getTotalTravelTime());
-        System.out.println(individual.getTotalTimeWindowViolation());
+        System.out.println(individual.getDurationTimes());
     }
 }
