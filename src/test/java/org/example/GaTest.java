@@ -23,4 +23,10 @@ public class GaTest extends TestCase {
     public void testInit_pop() throws IOException, ParseException {
         ga.init_pop();
     }
+
+    public void testSelectBest() throws IOException, ParseException {
+        ga.init_pop();
+        System.out.println(ga.pop.get(9).getTravelTimeSum());
+        System.out.println(ga.selectBest(ga.pop,10).get(9).getTravelTimeSum());
+    }
 }

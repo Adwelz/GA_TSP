@@ -22,9 +22,7 @@ public class Individual {
 
     private List<Integer> allocatablePatients = new ArrayList<>();
 
-    private float travelTime;
-
-    private float durationTime;
+    private float travelTimeSum = 0;
 
     private List<List<Float>> expectedTimeWindows = new ArrayList<>();
 
@@ -50,33 +48,8 @@ public class Individual {
         return travelTimes;
     }
 
-    public float getTotalTravelTime(){
-        float sum = 0;
-        for(float d : this.travelTimes)
-            sum += d;
-        return sum;
-    }
-
     public List<Float> getDurationTimes() {
         return durationTimes;
-    }
-
-    public float getTotalDurationTime(){
-        float sum = 0;
-        for(float d : this.durationTimes)
-            sum += d;
-        return sum;
-    }
-
-    public List<Float> getTimeWindowViolations() {
-        return timeWindowViolations;
-    }
-
-    public float getTotalTimeWindowViolation(){
-        float sum = 0;
-        for(float d : this.timeWindowViolations)
-            sum += d;
-        return sum;
     }
 
     public float getDepotReturnTime() {
@@ -85,6 +58,10 @@ public class Individual {
 
     public List<Integer> getNursesDemands() {
         return nursesDemands;
+    }
+
+    public float getTravelTimeSum() {
+        return travelTimeSum;
     }
 
     private List<Integer> shuffledClients(){
@@ -229,11 +206,9 @@ public class Individual {
                 nursesPaths.add(nurseRoute);
             }
     }
+        for(int i=0;i<nbrNurses;i++){
+            travelTimeSum += travelTimes.get(i);
+        }
 }
 
-    private float getDurationTime(List<Integer> nursePath){
-        float duration = 0 ;
-
-        return duration;
-    }
 }

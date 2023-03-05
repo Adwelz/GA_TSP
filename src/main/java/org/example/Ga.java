@@ -4,6 +4,8 @@ import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class Ga {
@@ -29,6 +31,12 @@ public class Ga {
         for(int i=0;i<nbrNurses;i++){
             pop.add(new Individual());
         }
+    }
+
+    List<Individual> selectBest(List<Individual> individuals, int n){
+        Collections.sort(individuals, Comparator.comparing(Individual::getTravelTimeSum));
+
+        return individuals.subList(0, Math.min(n, individuals.size()));
     }
 
     void crossover(Individual i1, Individual i2){
