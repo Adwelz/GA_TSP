@@ -3,10 +3,7 @@ package org.example;
 import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 public class Ga {
     private JsonUtils jsonUtils;
@@ -26,9 +23,7 @@ public class Ga {
     }
 
     void init_pop() throws IOException, ParseException {
-        int nbrNurses = jsonUtils.getNbrNurses();
-
-        for(int i=0;i<nbrNurses;i++){
+        for(int i=0;i<nbr_individuals;i++){
             pop.add(new Individual());
         }
     }
