@@ -4,6 +4,7 @@ import junit.framework.TestCase;
 import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
+import java.util.List;
 
 public class GaTest extends TestCase {
 
@@ -24,4 +25,7 @@ public class GaTest extends TestCase {
         System.out.println(ga.selectBest(ga.pop,2));
     }
 
+    public void testMutate() throws Exception {
+
+    }
 }

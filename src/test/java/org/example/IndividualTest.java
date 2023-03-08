@@ -1,7 +1,9 @@
 package org.example;
 
 import junit.framework.TestCase;
+import org.json.simple.parser.ParseException;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -31,9 +33,12 @@ public class IndividualTest extends TestCase {
     }
 
     public void testMutate() throws Exception {
-        Individual individual = new Individual();
-        System.out.println(individual.getNursesRoutes());
-        Individual individual2 = new Individual(individual.getNursesRoutes());
-        System.out.println(individual2.getCoveredDemands());
+        Individual i = new Individual();
+        System.out.println(i.getNursesRoutes());
+        Individual mutate = i.mutate();
+        System.out.println(mutate.getNursesRoutes());
+        System.out.println(i.getNursesRoutes());
+
+
     }
 }

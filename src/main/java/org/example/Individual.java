@@ -7,37 +7,26 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 public class Individual {
-    JsonUtils jsonUtils = JsonUtils.getInstance();
+    final private List<List<Integer>> nursesRoutes;
 
-    private float depotReturnTime = jsonUtils.getReturnTime();
+    final private List<Integer> allocatablePatients;
 
-    private int nbrNurses = jsonUtils.getNbrNurses();
+    final private float travelTimeSum;
 
-    private int capacityNurse = jsonUtils.getCapacityNurses();
+    final private float timeViolation;
 
-    private int nbrPatients = jsonUtils.getNrbPatients();
+    final private List<List<Float>> expectedTimeWindows;
 
-    private List<List<Integer>> nursesRoutes;
+    final private List<List<Float>> actualTimeWindows;
 
-    private List<Integer> allocatablePatients;
+    final private List<Integer> coveredDemands;
 
-    private float travelTimeSum;
+    final private List<Float> routeTravelTimes;
 
-    private float timeViolation;
-
-    private List<List<Float>> expectedTimeWindows;
-
-    private List<List<Float>> actualTimeWindows;
-
-    private List<Integer> coveredDemands;
-
-    private List<Float> routeTravelTimes;
-
-    private List<Float> routeDurations;
-
-    private List<Float> timeWindowViolations;
+    final private List<Float> routeDurations;
 
     public List<List<Integer>> getNursesRoutes() {
         return nursesRoutes;
@@ -49,10 +38,6 @@ public class Individual {
 
     public List<Float> getRouteTravelTimes() {
         return routeTravelTimes;
-    }
-
-    public float getDepotReturnTime() {
-        return depotReturnTime;
     }
 
     public List<List<Float>> getExpectedTimeWindows() {
@@ -79,21 +64,23 @@ public class Individual {
         return routeDurations;
     }
 
-    public List<Float> getTimeWindowViolations() {
-        return timeWindowViolations;
-    }
+    private List<Integer> shuffledClients() throws IOException, ParseException {
+        JsonUtils jsonUtils = JsonUtils.getInstance();
 
-    private List<Integer> shuffledClients(){
+        int nbrPatients = jsonUtils.getNrbPatients();
+
         List<Integer> list = new ArrayList<>();
 
-        for (int i = 1; i <= this.nbrPatients; i++) {
+        for (int i = 1; i <= nbrPatients; i++) {
             list.add(i);
         }
         Collections.shuffle(list);
         return list;
     }
 
-    List<Float> getTimeWindowOfTheNextPatient(int currentPatient, int nextPatient, float currentPatientEndTime) {
+    List<Float> getTimeWindowOfTheNextPatient(int currentPatient, int nextPatient, float currentPatientEndTime) throws IOException, ParseException {
+        JsonUtils jsonUtils = JsonUtils.getInstance();
+
         float actualStartTime=currentPatientEndTime + jsonUtils.getTravelTime(currentPatient, nextPatient);
 
         float expectedStartTime = jsonUtils.getPatientStartTime(nextPatient);
@@ -116,7 +103,11 @@ public class Individual {
         return StartTimeAndEndTimeOfTheNextPatient;
     }
 
-    private Float getTimeWindowViolation(List<List<Float>> expectedTimeWindows, List<List<Float>> actualTimeWindows){
+    private Float getTimeWindowViolation(List<List<Float>> expectedTimeWindows, List<List<Float>> actualTimeWindows) throws IOException, ParseException {
+        JsonUtils jsonUtils = JsonUtils.getInstance();
+
+        int nbrPatients = jsonUtils.getNrbPatients();
+
         float timeWindowViolation = 0;
 
         for(int i=0;i<nbrPatients;i++){
@@ -136,7 +127,11 @@ public class Individual {
         return timeWindowViolation;
     }
 
-    private List<List<Float>> initExpectedTimeWindows(){
+    private List<List<Float>> initExpectedTimeWindows() throws IOException, ParseException {
+        JsonUtils jsonUtils = JsonUtils.getInstance();
+
+        int nbrPatients = jsonUtils.getNrbPatients();
+
         List<List<Float>> expectedTimeWindows =new ArrayList<>();
         for(int i=1;i<=nbrPatients;i++){
             List<Float> expectedTimeWindow = new ArrayList<>();
@@ -149,7 +144,11 @@ public class Individual {
         return expectedTimeWindows;
     }
 
-    private List<List<Float>> initActualTimeWindows(){
+    private List<List<Float>> initActualTimeWindows() throws IOException, ParseException {
+        JsonUtils jsonUtils = JsonUtils.getInstance();
+
+        int nbrPatients = jsonUtils.getNrbPatients();
+
         List<List<Float>> actualTimeWindows = new ArrayList<>();
         for(int i=1;i<=nbrPatients;i++){
             List<Float> actualTimeWindow = new ArrayList<>();
@@ -160,20 +159,25 @@ public class Individual {
     }
 
     public Individual() throws IOException, ParseException {
+        JsonUtils jsonUtils = JsonUtils.getInstance();
+
+        float depotReturnTime = jsonUtils.getReturnTime();
+
+        int nbrNurses = jsonUtils.getNbrNurses();
+
+        int capacityNurse = jsonUtils.getCapacityNurses();
+
         nursesRoutes = new ArrayList<>();
-        allocatablePatients = new ArrayList<>();
-        travelTimeSum = 0;
         coveredDemands = new ArrayList<>();
         routeTravelTimes = new ArrayList<>();
         routeDurations =new ArrayList<>();
-        timeWindowViolations = new ArrayList<>();
 
         expectedTimeWindows = initExpectedTimeWindows();
         actualTimeWindows = initActualTimeWindows();
 
         this.allocatablePatients = shuffledClients();
 
-        for (int j = 1; j <= this.nbrNurses; j++) {
+        for (int j = 1; j <= nbrNurses; j++) {
             List<Integer> nurseRoute = new ArrayList<>();
 
             int nurseDemands = 0;
@@ -213,7 +217,7 @@ public class Individual {
 
                 travelTime += jsonUtils.getTravelTime(currentPatient,nextPatient);
             }
-            while(nurseDemands<this.capacityNurse & (currentPatientEndTime + jsonUtils.getTravelTime(nurseRoute.get(nurseRoute.size() - 1),0)) <this.depotReturnTime);
+            while(nurseDemands<capacityNurse & (currentPatientEndTime + jsonUtils.getTravelTime(nurseRoute.get(nurseRoute.size() - 1),0)) <depotReturnTime);
 
             int lastPatient = 0;
 
@@ -223,7 +227,7 @@ public class Individual {
                 nursesRoutes.add(nurseRoute);
             }
             else {
-                if ((currentPatientEndTime + jsonUtils.getTravelTime(nurseRoute.get(nurseRoute.size() - 1), 0)) < this.depotReturnTime) {
+                if ((currentPatientEndTime + jsonUtils.getTravelTime(nurseRoute.get(nurseRoute.size() - 1), 0)) <= depotReturnTime) {
                     lastPatient = nurseRoute.get(nurseRoute.size() - 1);
                 }
                 else {
@@ -252,25 +256,47 @@ public class Individual {
                 nursesRoutes.add(nurseRoute);
             }
     }
+
+    float s = 0;
+
     for(int i=0;i<nbrNurses;i++){
-        travelTimeSum += routeTravelTimes.get(i);
+        s += routeTravelTimes.get(i);
     }
+    travelTimeSum = s;
 
     timeViolation = getTimeWindowViolation(expectedTimeWindows,actualTimeWindows);
 }
 
-    public Individual(List<List<Integer>> nursesPaths) throws Exception {
-        allocatablePatients = new ArrayList<>();
-        travelTimeSum = 0;
+    public Individual(List<List<Integer>> nursesRoutes) throws Exception {
+        JsonUtils jsonUtils = JsonUtils.getInstance();
+
+        float depotReturnTime = jsonUtils.getReturnTime();
+
+        int nbrNurses = jsonUtils.getNbrNurses();
+
+        int capacityNurse = jsonUtils.getCapacityNurses();
+
+        int nbrPatients = jsonUtils.getNrbPatients();
+
         coveredDemands = new ArrayList<>();
         routeTravelTimes = new ArrayList<>();
         routeDurations =new ArrayList<>();
-        timeWindowViolations = new ArrayList<>();
 
         expectedTimeWindows = initExpectedTimeWindows();
         actualTimeWindows = initActualTimeWindows();
 
-        this.nursesRoutes = nursesPaths;
+        this.nursesRoutes = new ArrayList<>(nursesRoutes);
+
+        List<Integer> allocatablePatients = new ArrayList<>();
+
+        for(int i=1;i<nbrPatients;i++)
+        for(List<Integer> route : this.nursesRoutes){
+                if(!route.contains(i)){
+                    allocatablePatients.add(i);
+                }
+        }
+
+        this.allocatablePatients = allocatablePatients;
 
         for(List<Integer> path : this.nursesRoutes){
             if(path.isEmpty()){
@@ -319,7 +345,7 @@ public class Individual {
                 travelTime += jsonUtils.getTravelTime(lastPatient, 0);
                 float endTime = lastPatienEndTime + jsonUtils.getTravelTime(lastPatient, 0);
 
-                if(endTime>this.depotReturnTime){
+                if(endTime>depotReturnTime){
                     throw new Exception("Invalid return time");
                 }
 
@@ -328,72 +354,79 @@ public class Individual {
                 routeDurations.add(endTime);
             }
         }
+
+        float s = 0;
+
         for(int i=0;i<nbrNurses;i++){
-            travelTimeSum += routeTravelTimes.get(i);
+            s += routeTravelTimes.get(i);
         }
+        travelTimeSum = s;
 
         timeViolation = getTimeWindowViolation(expectedTimeWindows,actualTimeWindows);
     }
 
-    List<List<Integer>> mutate(List<List<Integer>> nursesPaths) throws IOException, ParseException {
-        List<List<Integer>> clonedNursesPaths = new ArrayList(nursesPaths);
+    public List<List<Integer>> mutateNursesRoutes() {
+        List<List<Integer>> clonedNursesRoutes = new ArrayList<>();
+        List<Integer> allocatablePatients = new ArrayList<>(this.allocatablePatients);
+
+        for (List<Integer> route : nursesRoutes) {
+            List<Integer> clonedRoute = new ArrayList<>(route);
+            clonedNursesRoutes.add(clonedRoute);
+        }
 
         Random rand = new Random();
 
-        int r1 = rand.nextInt(clonedNursesPaths.size()-1);
-        List<Integer> path1 = clonedNursesPaths.get(r1);
+        int r1 = rand.nextInt(clonedNursesRoutes.size()+1);
+        List<Integer> route1;
+        if(r1==clonedNursesRoutes.size()+1){
+            route1 = allocatablePatients;
+        }else{
+        route1 = clonedNursesRoutes.get(r1);}
 
-        while(path1.isEmpty()){
-            r1 = rand.nextInt(clonedNursesPaths.size()-1);
-            path1 = clonedNursesPaths.get(r1);
-        }
-
-        path1 = clonedNursesPaths.remove(r1);
-
-        int r2 = rand.nextInt(clonedNursesPaths.size()-1);
-
-        List<Integer> path2 = clonedNursesPaths.remove(r2);
-
-        int i1;
-
-        if(path1.size()==1){
-            i1 =0;
-        }
-        else{i1 = rand.nextInt(path1.size() - 1);}
-        int patient = path1.remove(i1);
-
-        if(path2.isEmpty()){
-            path2.add(patient);
-        }
-        else {
-            int i2;
-            if(path2.size()==1){
-                i2 = 0;
+        while(route1.isEmpty()){
+            r1 = rand.nextInt(clonedNursesRoutes.size()+1);
+            if(r1==clonedNursesRoutes.size()+1){
+                route1 = allocatablePatients;
             }
-            else{i2 = rand.nextInt(path2.size() - 1);}
-            path2.add(i2,patient);
+            else{
+            route1 = clonedNursesRoutes.get(r1);}
         }
 
-        clonedNursesPaths.add(r1,path1);
-        clonedNursesPaths.add(r2,path2);
+        int i1 = rand.nextInt(route1.size());
+        int patient = route1.get(i1);
 
-        return clonedNursesPaths;
+        int r2 = rand.nextInt(clonedNursesRoutes.size());
+        while (r2 == r1) {
+            r2 = rand.nextInt(clonedNursesRoutes.size());
+        }
+        List<Integer> route2 = clonedNursesRoutes.get(r2);
+
+        int i2;
+        if(route2.isEmpty()){
+            i2 = 0;
+        }else {
+            i2 = rand.nextInt(route2.size());
+        }
+
+        route2.add(i2,patient);
+        route1.remove(i1);
+
+        return clonedNursesRoutes;
     }
 
     public Individual mutate() throws Exception {
+        Individual mutated = null;
         boolean b = true;
-
-        Individual mutateIndividual = null;
-
-        while(b) {
-            List<List<Integer>> mutateNursesPaths = mutate(nursesRoutes);
+        while (b) {
             try {
-                mutateIndividual =new Individual(mutateNursesPaths);
+                List<List<Integer>> mutateNursesPaths = mutateNursesRoutes();
+                mutated = new Individual(mutateNursesPaths);
                 b = false;
             } catch (Exception e) {
-
+                e.printStackTrace();
             }
         }
-        return mutateIndividual;
+
+        return mutated;
     }
 }
