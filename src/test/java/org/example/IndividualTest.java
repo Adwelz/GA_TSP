@@ -38,7 +38,15 @@ public class IndividualTest extends TestCase {
         Individual mutate = i.mutate();
         System.out.println(mutate.getNursesRoutes());
         System.out.println(i.getNursesRoutes());
+    }
 
-
+    public void testCrossover() throws Exception {
+        Individual i1 = new Individual();
+        System.out.println(i1.getNursesRoutes());
+        Individual i2 = new Individual();
+        System.out.println(i2.getNursesRoutes());
+        List<Individual> childs = i1.crossover(i2);
+        System.out.println(childs.get(0).getNursesRoutes());
+        System.out.println(childs.get(1).getNursesRoutes());
     }
 }
