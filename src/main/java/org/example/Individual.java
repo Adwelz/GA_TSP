@@ -5,12 +5,20 @@ import org.json.simple.parser.ParseException;
 import java.io.IOException;
 import java.util.*;
 
-public class Individual implements Cloneable{
+public class Individual{
+    final private float penalty = 0.6f;
+
     final private List<List<Integer>> nursesRoutes;
 
     final private List<Integer> allocatablePatients;
 
     final private float travelTimeSum;
+
+    final private float travelTimeSumWithPenalty;
+
+    public float getTravelTimeSumWithPenalty() {
+        return travelTimeSumWithPenalty;
+    }
 
     final private float timeViolation;
 
@@ -140,7 +148,38 @@ public class Individual implements Cloneable{
         return actualTimeWindows;
     }
 
-    public Individual() throws IOException, ParseException {
+    public List<Integer> getClosestUnseenNeighbors(Integer patient) throws IOException, ParseException {
+        JsonUtils jsonUtils = JsonUtils.getInstance();
+
+        int nbrPatients = jsonUtils.getNrbPatients();
+
+        List<Float> distances = new ArrayList<>();
+        List<Integer> patientIndex = new ArrayList<>();
+
+        for(int i=1;i<=nbrPatients;i++) {
+                patientIndex.add(i-1);
+                distances.add(jsonUtils.getTravelTime(patient, i));
+        }
+
+        Collections.sort(patientIndex, (i1, i2) -> Float.compare(distances.get(i1), distances.get(i2)));
+
+        List<Integer> UnseenNeighbors = new ArrayList<>();
+
+        for(int i : patientIndex){
+            if(allocatablePatients.contains(i+1)&!UnseenNeighbors.contains(i+1)){
+                UnseenNeighbors.add(i+1);
+            }
+        }
+
+        return UnseenNeighbors;
+    }
+
+    public Individual() throws Exception {
+        List<Integer> coveredDemands1;
+        List<Float> routeDurations1;
+        float timeViolation1;
+        float travelTimeSum1;
+        List<Float> routeTravelTimes1;
         JsonUtils jsonUtils = JsonUtils.getInstance();
 
         float depotReturnTime = jsonUtils.getReturnTime();
@@ -152,26 +191,21 @@ public class Individual implements Cloneable{
         int nbrPatients = jsonUtils.getNrbPatients();
 
         nursesRoutes = new ArrayList<>();
-        coveredDemands = new ArrayList<>();
-        routeTravelTimes = new ArrayList<>();
-        routeDurations =new ArrayList<>();
+        coveredDemands1 = new ArrayList<>();
+        routeTravelTimes1 = new ArrayList<>();
+        routeDurations1 =new ArrayList<>();
 
-        expectedTimeWindows = initExpectedTimeWindows();
-        actualTimeWindows = initActualTimeWindows();
+        List<List<Float>> expectedTimeWindows1 = initExpectedTimeWindows();
+        List<List<Float>> actualTimeWindows1 = initActualTimeWindows();
 
-        List<Integer> allocatablePatients = new ArrayList<>();
+        allocatablePatients = new ArrayList<>();
 
         for (int i = 1; i <= nbrPatients; i++) {
             allocatablePatients.add(i);
         }
 
-        this.allocatablePatients = allocatablePatients;
-
-        List<Integer> allocatablePatientsShuffled = new ArrayList<>(allocatablePatients);
-
-        Collections.shuffle(allocatablePatientsShuffled);
-
         for (int j = 1; j <= nbrNurses; j++) {
+
             List<Integer> nurseRoute = new ArrayList<>();
 
             int nurseDemands = 0;
@@ -179,25 +213,36 @@ public class Individual implements Cloneable{
             float travelTime = 0;
             float currentPatientEndTime = 0;
 
+            Random r = new Random();
+
             do {
+                int currentPatient ;
 
-                int currentPatient;
-                int nextPatient;
-
-                if(!allocatablePatientsShuffled.isEmpty()) {
-                    nextPatient = allocatablePatientsShuffled.remove(0);
+                if(nurseRoute.isEmpty()){
+                    currentPatient = 0;
                 }
                 else {
-                    break;
-                }
-
-                if(!nurseRoute.isEmpty()) {
                     currentPatient = nurseRoute.get(nurseRoute.size() - 1);
                 }
-                else {
-                    currentPatient = 0;
-                    travelTime += jsonUtils.getTravelTime(0,nextPatient);
+
+                List<Integer> closestNeighborsUnseen = getClosestUnseenNeighbors(currentPatient);
+
+                int nextPatient;
+
+                if(closestNeighborsUnseen.isEmpty()){
+                    break;
                 }
+                if(closestNeighborsUnseen.size()>1) {
+                    nextPatient = closestNeighborsUnseen.remove(r.nextInt(2));
+                }
+                else {
+                    nextPatient = closestNeighborsUnseen.remove(0);
+                }
+
+
+                int indexnextPatient = allocatablePatients.indexOf(nextPatient);
+
+                allocatablePatients.remove(indexnextPatient);
 
                 nurseRoute.add(nextPatient);
 
@@ -205,7 +250,7 @@ public class Individual implements Cloneable{
 
                 List<Float> actualTimeWindow = getTimeWindowOfTheNextPatient(currentPatient,nextPatient,currentPatientEndTime);
 
-                actualTimeWindows.set(nextPatient-1,actualTimeWindow);
+                actualTimeWindows1.set(nextPatient-1,actualTimeWindow);
 
                 currentPatientEndTime = actualTimeWindow.get(1);
 
@@ -216,20 +261,21 @@ public class Individual implements Cloneable{
             int lastPatient = 0;
 
             if(nurseRoute.isEmpty()){
-                routeTravelTimes.add(0f);
-
+                routeTravelTimes1.add(0f);
+                coveredDemands1.add(0);
+                routeDurations1.add(0f);
                 nursesRoutes.add(nurseRoute);
             }
             else {
-                if ((currentPatientEndTime + jsonUtils.getTravelTime(nurseRoute.get(nurseRoute.size() - 1), 0)) <= depotReturnTime) {
+                if ((currentPatientEndTime + jsonUtils.getTravelTime(nurseRoute.get(nurseRoute.size() - 1), 0)) <= depotReturnTime & nurseDemands<=capacityNurse) {
                     lastPatient = nurseRoute.get(nurseRoute.size() - 1);
                 }
                 else {
                     int unauthorisedPatient = nurseRoute.remove(nurseRoute.size() - 1);
 
-                    allocatablePatientsShuffled.add(unauthorisedPatient);
+                    allocatablePatients.add(unauthorisedPatient);
 
-                    actualTimeWindows.set(unauthorisedPatient-1,new ArrayList<>());
+                    actualTimeWindows1.set(unauthorisedPatient-1,new ArrayList<>());
 
                     lastPatient = nurseRoute.get(nurseRoute.size() - 1);
 
@@ -238,14 +284,14 @@ public class Individual implements Cloneable{
                     travelTime -= jsonUtils.getTravelTime(lastPatient, unauthorisedPatient);
                 }
 
-                float lastPatienEndTime = actualTimeWindows.get(lastPatient-1).get(1);
+                float lastPatienEndTime = actualTimeWindows1.get(lastPatient-1).get(1);
 
                 travelTime += jsonUtils.getTravelTime(lastPatient, 0);
                 float endTime = lastPatienEndTime + jsonUtils.getTravelTime(lastPatient, 0);
 
-                coveredDemands.add(nurseDemands);
-                routeTravelTimes.add(travelTime);
-                routeDurations.add(endTime);
+                coveredDemands1.add(nurseDemands);
+                routeTravelTimes1.add(travelTime);
+                routeDurations1.add(endTime);
 
                 nursesRoutes.add(nurseRoute);
             }
@@ -254,124 +300,19 @@ public class Individual implements Cloneable{
     float s = 0;
 
     for(int i=0;i<nbrNurses;i++){
-        s += routeTravelTimes.get(i);
+        s += routeTravelTimes1.get(i);
     }
-    travelTimeSum = s;
+    travelTimeSum1 = s;
 
-    timeViolation = getTimeWindowViolation(expectedTimeWindows,actualTimeWindows);
-}
-
-    public Individual(int nbrNurse,List<Integer> allocatablePatients) throws IOException, ParseException {
-        JsonUtils jsonUtils = JsonUtils.getInstance();
-
-        float depotReturnTime = jsonUtils.getReturnTime();
-
-        int capacityNurse = jsonUtils.getCapacityNurses();
-
-        int nbrNurses = nbrNurse;
-
-        nursesRoutes = new ArrayList<>();
-        coveredDemands = new ArrayList<>();
-        routeTravelTimes = new ArrayList<>();
-        routeDurations =new ArrayList<>();
-
-        expectedTimeWindows = initExpectedTimeWindows();
-        actualTimeWindows = initActualTimeWindows();
-
-        this.allocatablePatients = new ArrayList<>(allocatablePatients);
-
-        List<Integer> allocatablePatientsShuffled = new ArrayList<>(allocatablePatients);
-
-        Collections.shuffle(allocatablePatientsShuffled);
-
-        for (int j = 1; j <= nbrNurses; j++) {
-            List<Integer> nurseRoute = new ArrayList<>();
-
-            int nurseDemands = 0;
-
-            float travelTime = 0;
-            float currentPatientEndTime = 0;
-
-            do {
-
-                int currentPatient;
-                int nextPatient;
-
-                if(!allocatablePatientsShuffled.isEmpty()) {
-                    nextPatient = allocatablePatientsShuffled.remove(0);
-                }
-                else {
-                    break;
-                }
-
-                if(!nurseRoute.isEmpty()) {
-                    currentPatient = nurseRoute.get(nurseRoute.size() - 1);
-                }
-                else {
-                    currentPatient = 0;
-                    travelTime += jsonUtils.getTravelTime(0,nextPatient);
-                }
-
-                nurseRoute.add(nextPatient);
-
-                nurseDemands += jsonUtils.getPatientDemand(nextPatient);
-
-                List<Float> actualTimeWindow = getTimeWindowOfTheNextPatient(currentPatient,nextPatient,currentPatientEndTime);
-
-                actualTimeWindows.set(nextPatient-1,actualTimeWindow);
-
-                currentPatientEndTime = actualTimeWindow.get(1);
-
-                travelTime += jsonUtils.getTravelTime(currentPatient,nextPatient);
-            }
-            while(nurseDemands<capacityNurse & (currentPatientEndTime + jsonUtils.getTravelTime(nurseRoute.get(nurseRoute.size() - 1),0)) <depotReturnTime);
-
-            int lastPatient = 0;
-
-            if(nurseRoute.isEmpty()){
-                routeTravelTimes.add(0f);
-
-                nursesRoutes.add(nurseRoute);
-            }
-            else {
-                if ((currentPatientEndTime + jsonUtils.getTravelTime(nurseRoute.get(nurseRoute.size() - 1), 0)) <= depotReturnTime) {
-                    lastPatient = nurseRoute.get(nurseRoute.size() - 1);
-                }
-                else {
-                    int unauthorisedPatient = nurseRoute.remove(nurseRoute.size() - 1);
-
-                    allocatablePatientsShuffled.add(unauthorisedPatient);
-
-                    actualTimeWindows.set(unauthorisedPatient-1,new ArrayList<>());
-
-                    lastPatient = nurseRoute.get(nurseRoute.size() - 1);
-
-                    nurseDemands -= jsonUtils.getPatientDemand(unauthorisedPatient);
-
-                    travelTime -= jsonUtils.getTravelTime(lastPatient, unauthorisedPatient);
-                }
-
-                float lastPatienEndTime = actualTimeWindows.get(lastPatient-1).get(1);
-
-                travelTime += jsonUtils.getTravelTime(lastPatient, 0);
-                float endTime = lastPatienEndTime + jsonUtils.getTravelTime(lastPatient, 0);
-
-                coveredDemands.add(nurseDemands);
-                routeTravelTimes.add(travelTime);
-                routeDurations.add(endTime);
-
-                nursesRoutes.add(nurseRoute);
-            }
-        }
-
-        float s = 0;
-
-        for(int i=0;i<nbrNurses;i++){
-            s += routeTravelTimes.get(i);
-        }
-        travelTimeSum = s;
-
-        timeViolation = getTimeWindowViolation(expectedTimeWindows,actualTimeWindows);
+    timeViolation1 = getTimeWindowViolation(expectedTimeWindows1, actualTimeWindows1);
+    expectedTimeWindows = expectedTimeWindows1;
+    coveredDemands = coveredDemands1;
+    routeDurations = routeDurations1;
+    actualTimeWindows = actualTimeWindows1;
+    timeViolation = timeViolation1;
+    travelTimeSum = travelTimeSum1;
+    routeTravelTimes = routeTravelTimes1;
+    travelTimeSumWithPenalty = travelTimeSum + penalty * timeViolation;
     }
 
     public Individual(List<List<Integer>> nursesRoutes) throws Exception {
@@ -392,26 +333,35 @@ public class Individual implements Cloneable{
         expectedTimeWindows = initExpectedTimeWindows();
         actualTimeWindows = initActualTimeWindows();
 
+        List<List<Float>> expectedTimeWindows1 = initExpectedTimeWindows();
+        List<List<Float>> actualTimeWindows1 = initActualTimeWindows();
+
         this.nursesRoutes = new ArrayList<>(nursesRoutes);
 
-        List<Integer> allocatablePatients = new ArrayList<>();
+        allocatablePatients = new ArrayList<>();
 
-        for(int i=1;i<nbrPatients;i++)
-        for(List<Integer> route : this.nursesRoutes){
-                if(!route.contains(i)){
-                    allocatablePatients.add(i);
-                }
+        List<Integer> notAllocatablePatients = new ArrayList<>();
+
+        for(int i=1;i<=nbrPatients;i++){
+        for( List<Integer> route : nursesRoutes){
+            if(route.contains(i)&!allocatablePatients.contains(i)){
+                notAllocatablePatients.add(i);
+            }
+        }}
+
+        for(int i=1;i<=nbrPatients;i++){
+            if(!notAllocatablePatients.contains(i)&!allocatablePatients.contains(i))
+            {
+                allocatablePatients.add(i);
+            }
         }
 
-        this.allocatablePatients = allocatablePatients;
-
         for(List<Integer> path : this.nursesRoutes){
-            if(path.isEmpty()){
-                routeTravelTimes.add(0f);
-            }
-            else {
-                int nurseDemands = 0;
+            int nurseDemands = 0;
+            float travelTime = 0;
+            float endTime = 0;
 
+            if(!path.isEmpty()){
                 int firstPatient = path.get(0);
 
                 nurseDemands += jsonUtils.getPatientDemand(firstPatient);
@@ -421,8 +371,6 @@ public class Individual implements Cloneable{
                 actualTimeWindows.set(firstPatient-1,actualTimeWindow);
 
                 float currentPatientEndTime = actualTimeWindow.get(1);
-
-                float travelTime = 0;
 
                 travelTime += jsonUtils.getTravelTime(0, path.get(0));
 
@@ -441,25 +389,25 @@ public class Individual implements Cloneable{
                     travelTime += jsonUtils.getTravelTime(currentPatient, nextPatient);
                 }
 
-                if(nurseDemands>capacityNurse){
-                    throw new Exception("To many nurse demand");
-                }
-
                 int lastPatient = path.get(path.size() - 1);
 
-                float lastPatienEndTime = actualTimeWindows.get(lastPatient- 1).get(1);
+                float lastPatienEndTime = actualTimeWindow.get(1);
 
                 travelTime += jsonUtils.getTravelTime(lastPatient, 0);
-                float endTime = lastPatienEndTime + jsonUtils.getTravelTime(lastPatient, 0);
-
-                if(endTime>depotReturnTime){
-                    throw new Exception("Invalid return time");
-                }
-
-                coveredDemands.add(nurseDemands);
-                routeTravelTimes.add(travelTime);
-                routeDurations.add(endTime);
+                endTime = lastPatienEndTime + jsonUtils.getTravelTime(lastPatient, 0);
             }
+
+            if(nurseDemands>capacityNurse){
+                throw new Exception("To many nurse demand");
+            }
+
+            if(endTime>depotReturnTime){
+                throw new Exception("Invalid return time");
+            }
+
+            coveredDemands.add(nurseDemands);
+            routeTravelTimes.add(travelTime);
+            routeDurations.add(endTime);
         }
 
         float s = 0;
@@ -470,11 +418,12 @@ public class Individual implements Cloneable{
         travelTimeSum = s;
 
         timeViolation = getTimeWindowViolation(expectedTimeWindows,actualTimeWindows);
+
+        travelTimeSumWithPenalty = travelTimeSum + penalty * timeViolation;
     }
 
-    public List<List<Integer>> mutateNursesRoutes() {
+    private List<List<Integer>> mutateNursesRoutes() {
         List<List<Integer>> clonedNursesRoutes = new ArrayList<>();
-        List<Integer> allocatablePatients = new ArrayList<>(this.allocatablePatients);
 
         for (List<Integer> route : nursesRoutes) {
             List<Integer> clonedRoute = new ArrayList<>(route);
@@ -483,20 +432,13 @@ public class Individual implements Cloneable{
 
         Random rand = new Random();
 
-        int r1 = rand.nextInt(clonedNursesRoutes.size()+1);
+        int r1 = rand.nextInt(clonedNursesRoutes.size());
         List<Integer> route1;
-        if(r1==clonedNursesRoutes.size()){
-            route1 = allocatablePatients;
-        }else{
-        route1 = clonedNursesRoutes.get(r1);}
+        route1 = clonedNursesRoutes.get(r1);
 
         while(route1.isEmpty()){
-            r1 = rand.nextInt(clonedNursesRoutes.size()+1);
-            if(r1==clonedNursesRoutes.size()){
-                route1 = allocatablePatients;
-            }
-            else{
-            route1 = clonedNursesRoutes.get(r1);}
+            r1 = rand.nextInt(clonedNursesRoutes.size());
+            route1 = clonedNursesRoutes.get(r1);
         }
 
         int i1 = rand.nextInt(route1.size());
@@ -530,11 +472,140 @@ public class Individual implements Cloneable{
                 mutated = new Individual(mutateNursesPaths);
                 b = false;
             } catch (Exception e) {
-                e.printStackTrace();
+
             }
         }
 
         return mutated;
+    }
+
+    public List<Individual> crossoverVisma(Individual otherParent) throws Exception {
+        JsonUtils jsonUtils = JsonUtils.getInstance();
+
+        int nbrPatients = jsonUtils.getNrbPatients();
+
+        int parent1Size = nursesRoutes.size();
+        int parent2Size = otherParent.getNursesRoutes().size();
+
+        if(parent1Size!=parent2Size){
+            throw new Exception("differente size");
+        }
+
+        List<List<Integer>> parent1NursesRoutes = new ArrayList<>();
+
+        for (List<Integer> route : nursesRoutes) {
+            List<Integer> clonedRoute = new ArrayList<>(route);
+            parent1NursesRoutes.add(clonedRoute);
+        }
+
+        List<List<Integer>> parent2NursesRoutes = new ArrayList<>();
+
+        for (List<Integer> route : otherParent.getNursesRoutes()) {
+            List<Integer> clonedRoute = new ArrayList<>(route);
+            parent2NursesRoutes.add(clonedRoute);
+        }
+
+        Random r = new Random();
+
+        List<Integer> route1parent1 = parent1NursesRoutes.get(r.nextInt(parent1NursesRoutes.size()));
+        List<Integer> removePatientParent1 = new ArrayList<>();
+
+        List<Integer> route1parent2 = parent2NursesRoutes.get(r.nextInt(parent2NursesRoutes.size()));
+        List<Integer> removePatientParent2 = new ArrayList<>();
+
+        for(int patient : route1parent1){
+        for(List<Integer> route : parent2NursesRoutes){
+            if(route.contains(patient)){
+                int i = route.indexOf(patient);
+                removePatientParent2.add(route.remove(i));
+            }
+        }}
+
+        for(int patient : route1parent2){
+            for(List<Integer> route : parent1NursesRoutes){
+                if(route.contains(patient)){
+                    int i = route.indexOf(patient);
+                    removePatientParent1.add(route.remove(i));
+                }
+            }}
+
+        List<Float> parent1NursesRoutesDurations = new Individual(parent1NursesRoutes).getRouteDurations();
+        List<Float> parent2NursesRoutesDurations = new Individual(parent2NursesRoutes).getRouteDurations();
+
+        for(int patient : removePatientParent2){
+            int routeIndex = 0;
+            List<Integer> route0Copy = new ArrayList<>(parent2NursesRoutes.get(0));
+            float route0CopyDuration = parent2NursesRoutesDurations.get(0);
+            List<Float> timeWindow0;
+            if(!route0Copy.isEmpty()) {
+                timeWindow0 = getTimeWindowOfTheNextPatient(0, patient, route0CopyDuration);
+            }else{
+                timeWindow0 = getTimeWindowOfTheNextPatient(0, patient, route0CopyDuration);
+            }
+            route0CopyDuration = timeWindow0.get(1);
+            for(int i = 0;i<parent2NursesRoutes.size();i++) {
+                List<Integer> routeCopy = new ArrayList<>(parent2NursesRoutes.get(i));
+                float routeCopyDuration = parent2NursesRoutesDurations.get(i);
+                List<Float> timeWindow;
+                if(!routeCopy.isEmpty()) {
+                    timeWindow = getTimeWindowOfTheNextPatient(routeCopy.get(routeCopy.size() - 1), patient, routeCopyDuration);
+                }else{
+                    timeWindow = getTimeWindowOfTheNextPatient(0, patient, routeCopyDuration);
+                }
+                routeCopyDuration = timeWindow.get(1);
+                if(routeCopyDuration<route0CopyDuration){
+                    route0CopyDuration = routeCopyDuration;
+                    routeIndex=i;
+                }
+            }
+            parent2NursesRoutes.get(routeIndex).add(patient);
+        }
+
+        for(int patient : removePatientParent1){
+            int routeIndex = 0;
+            List<Integer> route0Copy = new ArrayList<>(parent1NursesRoutes.get(0));
+            float route0CopyDuration = parent1NursesRoutesDurations.get(0);
+            List<Float> timeWindow0;
+            if(!route0Copy.isEmpty()) {
+                timeWindow0 = getTimeWindowOfTheNextPatient(0, patient, route0CopyDuration);
+            }else{
+                timeWindow0 = getTimeWindowOfTheNextPatient(0, patient, route0CopyDuration);
+            }
+            route0CopyDuration = timeWindow0.get(1);
+            for(int i = 0;i<parent1NursesRoutes.size();i++) {
+                List<Integer> routeCopy = new ArrayList<>(parent1NursesRoutes.get(i));
+                float routeCopyDuration = parent1NursesRoutesDurations.get(i);
+                List<Float> timeWindow;
+                if(!routeCopy.isEmpty()) {
+                    timeWindow = getTimeWindowOfTheNextPatient(routeCopy.get(routeCopy.size() - 1), patient, routeCopyDuration);
+                }else{
+                    timeWindow = getTimeWindowOfTheNextPatient(0, patient, routeCopyDuration);
+                }
+                routeCopyDuration = timeWindow.get(1);
+                if(routeCopyDuration<route0CopyDuration){
+                    route0CopyDuration = routeCopyDuration;
+                    routeIndex=i;
+                }
+            }
+            parent1NursesRoutes.get(routeIndex).add(patient);
+        }
+
+        List<Individual> childs = new ArrayList<>();
+        childs.add(new Individual(parent1NursesRoutes));
+        childs.add(new Individual(parent2NursesRoutes));
+        return childs;
+    }
+
+    private float getTimeTravel(List<Integer> route) throws IOException, ParseException {
+        JsonUtils jsonUtils = JsonUtils.getInstance();
+
+        float routeTravelTime = 0;
+        routeTravelTime+=jsonUtils.getTravelTime(0,route.get(0));
+        for(int i=0;i<route.size()-1;i++){
+            routeTravelTime+=jsonUtils.getTravelTime(route.get(i),route.get(i+1));
+        }
+        routeTravelTime+=jsonUtils.getTravelTime(0,route.get(route.size()-1));
+        return routeTravelTime;
     }
 
     public List<Individual> crossover(Individual otherParent) throws Exception {
@@ -582,7 +653,7 @@ public class Individual implements Cloneable{
         List<Integer> parent1firstHalfPatient =new ArrayList<>();
         List<Integer> parent1secondHalfPatient =new ArrayList<>();
 
-        for(int patient=1;patient<=nbrPatients;patient++)
+        for(int patient=1;patient<=nbrPatients;patient++){
             for(List<Integer> route : parent1firstHalf){
                 if(route.contains(patient)){
                     parent1firstHalfPatient.add(patient);
@@ -590,20 +661,19 @@ public class Individual implements Cloneable{
                 else{
                     parent1secondHalfPatient.add(patient);
                 }
-            }
+            }}
 
         List<Integer> parent2secondHalfPatient =new ArrayList<>();
         List<Integer> parent2firstHalfPatient =new ArrayList<>();
 
-        for(int patient=1;patient<=nbrPatients;patient++)
-            for(List<Integer> route : parent2firstHalf){
-                if(route.contains(patient)){
+        for(int patient=1;patient<=nbrPatients;patient++){
+            for(List<Integer> route : parent2firstHalf) {
+                if (route.contains(patient)) {
                     parent2firstHalfPatient.add(patient);
-                }
-                else{
+                } else {
                     parent2secondHalfPatient.add(patient);
                 }
-            }
+            }}
 
         List<Integer> allowablePatientForChild1 = new ArrayList<>();
 
@@ -666,6 +736,5 @@ public class Individual implements Cloneable{
         childs.add(new Individual(child2));
         return childs;
     }
-
 
 }

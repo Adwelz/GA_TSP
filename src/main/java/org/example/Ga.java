@@ -14,16 +14,15 @@ public class Ga {
 
     List<Individual> pop = new ArrayList<>();
 
-    public Ga(int numberOfCycles, int nbrIndividuals, float crossoverRate, float mutationRate) throws IOException, ParseException {
+    public Ga( int nbrIndividuals, float crossoverRate, float mutationRate) throws IOException, ParseException {
         this.jsonUtils = JsonUtils.getInstance();
-
 
         this.nbr_individuals = nbrIndividuals;
         this.crossover_rate = crossoverRate;
         this.mutation_rate = mutationRate;
     }
 
-    void init_pop() throws IOException, ParseException {
+    void init_pop() throws Exception {
         for(int i=0;i<nbr_individuals;i++){
             pop.add(new Individual());
         }
@@ -36,16 +35,16 @@ public class Ga {
             individualsCopy.add(new Individual(i.getNursesRoutes()));
         }
 
-        Collections.sort(individualsCopy, Comparator.comparing(Individual::getTravelTimeSum));
+        Collections.sort(individualsCopy, Comparator.comparing(Individual::getTravelTimeSumWithPenalty));
 
         return individualsCopy.subList(0, Math.min(n, individuals.size()));
     }
 
     List<Individual> crossover(Individual i1, Individual i2) throws Exception {
-        return i1.crossover(i2);
+        return i1.crossoverVisma(i2);
     }
 
-    void run() throws Exception {
+    void run(int nbrOfCycle) throws Exception {
         init_pop();
 
         int nbrParents = (int) (nbr_individuals*crossover_rate);
@@ -54,26 +53,29 @@ public class Ga {
             nbrParents-=1;
         }
 
-        List<Individual> parents = selectBest(pop,nbrParents );
+        for(int k=0;k<nbrOfCycle;k++) {
 
-        for(int i = 0;i< nbrParents;i+=2){
-            List<Individual> childs = crossover(parents.get(i),parents.get(i+1));
+            List<Individual> parents = selectBest(pop, nbrParents);
 
-            Individual child1 = childs.get(0);
-            Individual child2 = childs.get(1);
+            for (int i = 0; i < nbrParents; i += 2) {
+                List<Individual> childs = crossover(parents.get(i), parents.get(i + 1));
 
-            if(Math.random() < mutation_rate){
-                child1 = child1.mutate();
+                Individual child1 = childs.get(0);
+                Individual child2 = childs.get(1);
+
+                if (Math.random() < mutation_rate) {
+                    child1 = child1.mutate();
+                }
+
+                if (Math.random() < mutation_rate) {
+                    child2 = child2.mutate();
+                }
+
+                pop.add(child1);
+                pop.add(child2);
             }
 
-            if(Math.random() < mutation_rate) {
-                child2 = child2.mutate();
-            }
-
-            pop.add(child1);
-            pop.add(child2);
+            pop = selectBest(pop, nbr_individuals);
         }
-
-        pop = selectBest(pop, nbr_individuals);
     }
 }
