@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.*;
 
 public class Individual{
-    final private float penalty = 0.6f;
+    final private float penalty = 0.5f;
 
     final private List<List<Integer>> nursesRoutes;
 
@@ -149,29 +149,35 @@ public class Individual{
     }
 
     public List<Integer> getClosestUnseenNeighbors(Integer patient) throws IOException, ParseException {
+        List<Integer> neighbors = getNeighbors(patient);
+
+        List<Integer> UnseenNeighbors = new ArrayList<>();
+
+        for(int i : neighbors){
+            if(allocatablePatients.contains(i)&!UnseenNeighbors.contains(i)){
+                UnseenNeighbors.add(i);
+            }
+        }
+
+        return UnseenNeighbors;
+    }
+
+    public List<Integer> getNeighbors(Integer patient) throws IOException, ParseException {
         JsonUtils jsonUtils = JsonUtils.getInstance();
 
         int nbrPatients = jsonUtils.getNrbPatients();
 
         List<Float> distances = new ArrayList<>();
-        List<Integer> patientIndex = new ArrayList<>();
+        List<Integer> patients = new ArrayList<>();
 
-        for(int i=1;i<=nbrPatients;i++) {
-                patientIndex.add(i-1);
+        for(int i=0;i<=nbrPatients;i++) {
+                patients.add(i);
                 distances.add(jsonUtils.getTravelTime(patient, i));
         }
 
-        Collections.sort(patientIndex, (i1, i2) -> Float.compare(distances.get(i1), distances.get(i2)));
-
-        List<Integer> UnseenNeighbors = new ArrayList<>();
-
-        for(int i : patientIndex){
-            if(allocatablePatients.contains(i+1)&!UnseenNeighbors.contains(i+1)){
-                UnseenNeighbors.add(i+1);
-            }
-        }
-
-        return UnseenNeighbors;
+        Collections.sort(patients, (i1, i2) -> Float.compare(distances.get(i1), distances.get(i2)));
+        patients.remove(patients.indexOf(patient));
+        return patients;
     }
 
     public Individual() throws Exception {
@@ -232,8 +238,8 @@ public class Individual{
                 if(closestNeighborsUnseen.isEmpty()){
                     break;
                 }
-                if(closestNeighborsUnseen.size()>1) {
-                    nextPatient = closestNeighborsUnseen.remove(r.nextInt(2));
+                if(closestNeighborsUnseen.size()>5) {
+                    nextPatient = closestNeighborsUnseen.remove(r.nextInt(6));
                 }
                 else {
                     nextPatient = closestNeighborsUnseen.remove(0);
@@ -378,7 +384,7 @@ public class Individual{
                     int currentPatient = path.get(i);
                     int nextPatient = path.get(i + 1);
 
-                    nurseDemands += jsonUtils.getPatientDemand(i+1);
+                    nurseDemands += jsonUtils.getPatientDemand(path.get(i + 1));
 
                     actualTimeWindow = getTimeWindowOfTheNextPatient(currentPatient, nextPatient, currentPatientEndTime);
 
@@ -482,8 +488,6 @@ public class Individual{
     public List<Individual> crossoverVisma(Individual otherParent) throws Exception {
         JsonUtils jsonUtils = JsonUtils.getInstance();
 
-        int nbrPatients = jsonUtils.getNrbPatients();
-
         int parent1Size = nursesRoutes.size();
         int parent2Size = otherParent.getNursesRoutes().size();
 
@@ -508,32 +512,184 @@ public class Individual{
         Random r = new Random();
 
         List<Integer> route1parent1 = parent1NursesRoutes.get(r.nextInt(parent1NursesRoutes.size()));
+        while(route1parent1.isEmpty()){
+            route1parent1 = parent1NursesRoutes.get(r.nextInt(parent1NursesRoutes.size()));
+
+        }
         List<Integer> removePatientParent1 = new ArrayList<>();
 
         List<Integer> route1parent2 = parent2NursesRoutes.get(r.nextInt(parent2NursesRoutes.size()));
+        while (route1parent2.isEmpty()){
+            route1parent2 = parent2NursesRoutes.get(r.nextInt(parent2NursesRoutes.size()));
+        }
         List<Integer> removePatientParent2 = new ArrayList<>();
 
         for(int patient : route1parent1){
-        for(List<Integer> route : parent2NursesRoutes){
-            if(route.contains(patient)){
-                int i = route.indexOf(patient);
-                removePatientParent2.add(route.remove(i));
+        for(int i=0;i<parent2NursesRoutes.size();i++){
+            if(parent2NursesRoutes.get(i).contains(patient)){
+                int i2 = parent2NursesRoutes.get(i).indexOf(patient);
+                removePatientParent2.add(parent2NursesRoutes.get(i).remove(i2));
             }
         }}
 
         for(int patient : route1parent2){
-            for(List<Integer> route : parent1NursesRoutes){
-                if(route.contains(patient)){
-                    int i = route.indexOf(patient);
-                    removePatientParent1.add(route.remove(i));
+            for(int i=0;i<parent1NursesRoutes.size();i++){
+                if(parent1NursesRoutes.get(i).contains(patient)){
+                    int i2 = parent1NursesRoutes.get(i).indexOf(patient);
+                    removePatientParent1.add(parent1NursesRoutes.get(i).remove(i2));
                 }
             }}
 
-        List<Float> parent1NursesRoutesDurations = new Individual(parent1NursesRoutes).getRouteDurations();
-        List<Float> parent2NursesRoutesDurations = new Individual(parent2NursesRoutes).getRouteDurations();
+        for(int patient : removePatientParent1){
+            int insertIndex =-1;
+            int routeIndex=-1;
+            int i = 0;
+            int j = 0;
+            while(insertIndex==-1 | routeIndex==-1) {
+                List<Integer> neighborsPatient = getNeighbors(patient);//.subList(0,10);
+                if(i==j){
+                    i = 0;
+                    j++;
+                }
+                int patient1 = neighborsPatient.get(i);
+
+                List<Integer> neighborsPatient1 = getNeighbors(patient1);
+                int patient2 = neighborsPatient1.get(j);
+
+                for (int k = 0; k < parent1NursesRoutes.size(); k++) {
+                    List<Integer> route = parent1NursesRoutes.get(k);
+                    if (patient1 == 0) {
+                        if (route.contains(patient2)) {
+                            int index2 = route.indexOf(patient2);
+                            if (index2 == route.size() - 1) {
+                                insertIndex = route.size();
+                            }
+                            if (index2 == 0) {
+                                insertIndex = 0;
+                            }
+                        }
+                    }
+                    if (patient2 == 0) {
+                        if (route.contains(patient1)) {
+                            int index1 = route.indexOf(patient1);
+                            if (index1 == route.size() - 1) {
+                                insertIndex = route.size();
+                            }
+                            if (index1 == 0) {
+                                insertIndex = 0;
+                            }
+                        }
+                    }
+                    if (route.contains(patient1) & route.contains(patient2)) {
+                        int index1 = route.indexOf(patient1);
+                        int index2 = route.indexOf(patient2);
+                        if (index2 > index1) {
+                            insertIndex = r.nextInt(index1, index2+1);
+                        } else {
+                            insertIndex = r.nextInt(index2, index1+1);
+                        }
+                    }
+
+                    if (insertIndex != -1) {
+                        try {
+                            List<Integer> routeCopy = new ArrayList<>(route);
+                            routeCopy.add(insertIndex,patient);
+                            List<List<Integer>> only1Route = new ArrayList<>();
+                            only1Route.add(routeCopy);
+                            new Individual(only1Route);
+                            routeIndex = k;
+                            break;
+                        } catch (Exception e) {
+
+                        }
+                    }
+                }
+                i++;
+            }
+            parent1NursesRoutes.get(routeIndex).add(insertIndex,patient);
+        }
+
+        for(int patient : removePatientParent2){
+            int insertIndex =-1;
+            int routeIndex=-1;
+            int i = 0;
+            int j =1;
+            while(insertIndex==-1 | routeIndex==-1) {
+                List<Integer> neighborsPatient = getNeighbors(patient);//.subList(0,10);
+                if(i==j){
+                    i = 0;
+                    j++;
+                }
+
+                int patient1 = neighborsPatient.get(i);
+
+                int patient2 = neighborsPatient.get(j);
+
+                for (int k = 0; k < parent2NursesRoutes.size(); k++) {
+                    List<Integer> route = parent2NursesRoutes.get(k);
+                    if (patient1 == 0) {
+                        if (route.contains(patient2)) {
+                            int index2 = route.indexOf(patient2);
+                            if (index2 == route.size() - 1) {
+                                insertIndex = route.size();
+                            }
+                            if (index2 == 0) {
+                                insertIndex = 0;
+                            }
+                        }
+                    }
+                    if (patient2 == 0) {
+                        if (route.contains(patient1)) {
+                            int index1 = route.indexOf(patient1);
+                            if (index1 == route.size() - 1) {
+                                insertIndex = route.size();
+                            }
+                            if (index1 == 0) {
+                                insertIndex = 0;
+                            }
+                        }
+                    }
+                    if (route.contains(patient1) & route.contains(patient2)) {
+                        int index1 = route.indexOf(patient1);
+                        int index2 = route.indexOf(patient2);
+                        if (index2 > index1) {
+                            insertIndex = r.nextInt(index1, index2+1);
+                        } else {
+                            insertIndex = r.nextInt(index2, index1+1);
+                        }
+                    }
+
+                    if (insertIndex != -1) {
+                        try {
+                            List<Integer> routeCopy = new ArrayList<>(route);
+                            routeCopy.add(insertIndex,patient);
+                            List<List<Integer>> only1Route = new ArrayList<>();
+                            only1Route.add(routeCopy);
+                            new Individual(only1Route);
+                            routeIndex = k;
+                            break;
+                        } catch (Exception e) {
+
+                        }
+                    }
+                }
+                i++;
+            }
+            parent2NursesRoutes.get(routeIndex).add(insertIndex,patient);
+        }
+
+        /*Individual parent1WithoutSomeElement = new Individual(parent1NursesRoutes);
+        Individual parent2WithoutSomeElement = new Individual(parent2NursesRoutes);
+
+        List<Float> parent1NursesRoutesDurations = parent1WithoutSomeElement.getRouteDurations();
+        List<Float> parent2NursesRoutesDurations = parent2WithoutSomeElement.getRouteDurations();
+
+        List<Integer> parent1NursesDemands = parent1WithoutSomeElement.getCoveredDemands();
+        List<Integer> parent2NursesDemands = parent2WithoutSomeElement.getCoveredDemands();
 
         for(int patient : removePatientParent2){
             int routeIndex = 0;
+            int nurseDemands =0;
             List<Integer> route0Copy = new ArrayList<>(parent2NursesRoutes.get(0));
             float route0CopyDuration = parent2NursesRoutesDurations.get(0);
             List<Float> timeWindow0;
@@ -545,24 +701,27 @@ public class Individual{
             route0CopyDuration = timeWindow0.get(1);
             for(int i = 0;i<parent2NursesRoutes.size();i++) {
                 List<Integer> routeCopy = new ArrayList<>(parent2NursesRoutes.get(i));
-                float routeCopyDuration = parent2NursesRoutesDurations.get(i);
+                float routeCopyDuration = parent2NursesRoutesDurations.get(i)- (routeCopy.isEmpty() ? 0 : jsonUtils.getTravelTime(routeCopy.size()-1, 0));;
                 List<Float> timeWindow;
                 if(!routeCopy.isEmpty()) {
                     timeWindow = getTimeWindowOfTheNextPatient(routeCopy.get(routeCopy.size() - 1), patient, routeCopyDuration);
                 }else{
                     timeWindow = getTimeWindowOfTheNextPatient(0, patient, routeCopyDuration);
                 }
-                routeCopyDuration = timeWindow.get(1);
-                if(routeCopyDuration<route0CopyDuration){
+                routeCopyDuration = timeWindow.get(1)+jsonUtils.getTravelTime(patient, 0);
+                if(routeCopyDuration<=route0CopyDuration){
                     route0CopyDuration = routeCopyDuration;
                     routeIndex=i;
                 }
             }
             parent2NursesRoutes.get(routeIndex).add(patient);
+            parent2NursesDemands.set(routeIndex,nurseDemands);
+            parent2NursesRoutesDurations.set(routeIndex,route0CopyDuration);
         }
 
         for(int patient : removePatientParent1){
             int routeIndex = 0;
+            int nurseDemands =0;
             List<Integer> route0Copy = new ArrayList<>(parent1NursesRoutes.get(0));
             float route0CopyDuration = parent1NursesRoutesDurations.get(0);
             List<Float> timeWindow0;
@@ -574,25 +733,164 @@ public class Individual{
             route0CopyDuration = timeWindow0.get(1);
             for(int i = 0;i<parent1NursesRoutes.size();i++) {
                 List<Integer> routeCopy = new ArrayList<>(parent1NursesRoutes.get(i));
-                float routeCopyDuration = parent1NursesRoutesDurations.get(i);
+                float routeCopyDuration = parent1NursesRoutesDurations.get(i)- (routeCopy.isEmpty() ? 0 : jsonUtils.getTravelTime(routeCopy.size()-1, 0));;
                 List<Float> timeWindow;
                 if(!routeCopy.isEmpty()) {
                     timeWindow = getTimeWindowOfTheNextPatient(routeCopy.get(routeCopy.size() - 1), patient, routeCopyDuration);
                 }else{
                     timeWindow = getTimeWindowOfTheNextPatient(0, patient, routeCopyDuration);
                 }
-                routeCopyDuration = timeWindow.get(1);
-                if(routeCopyDuration<route0CopyDuration){
+                routeCopyDuration = timeWindow.get(1)+jsonUtils.getTravelTime(patient, 0);
+                nurseDemands = parent1NursesDemands.get(i) + jsonUtils.getPatientDemand(patient);
+                if(routeCopyDuration<=route0CopyDuration & routeCopyDuration<=jsonUtils.getReturnTime() & nurseDemands <=jsonUtils.getCapacityNurses()){
                     route0CopyDuration = routeCopyDuration;
                     routeIndex=i;
                 }
             }
             parent1NursesRoutes.get(routeIndex).add(patient);
+            parent1NursesDemands.set(routeIndex,nurseDemands);
+            parent1NursesRoutesDurations.set(routeIndex,route0CopyDuration);
+        }*/
+
+        /*Individual parent1WithoutSomeElement = new Individual(parent1NursesRoutes);
+        Individual parent2WithoutSomeElement = new Individual(parent2NursesRoutes);
+
+        List<Float> parent1NursesRoutesDurations = parent1WithoutSomeElement.getRouteDurations();
+        List<Float> parent2NursesRoutesDurations = parent2WithoutSomeElement.getRouteDurations();
+
+        List<Integer> parent1NursesDemands = parent1WithoutSomeElement.getCoveredDemands();
+        List<Integer> parent2NursesDemands = parent2WithoutSomeElement.getCoveredDemands();
+
+        for(int patient : removePatientParent1){
+            int routeIndex = -1;
+            int nurseDemands= Integer.MAX_VALUE;
+            float routeCopyDuration;
+            float route0CopyGainDuration = Float.POSITIVE_INFINITY;
+            for(int i = 0;i<parent1NursesRoutes.size();i++) {
+                List<Integer> routeCopy = new ArrayList<>(parent1NursesRoutes.get(i));
+                routeCopyDuration = parent1NursesRoutesDurations.get(i)- (routeCopy.isEmpty() ? 0 : jsonUtils.getTravelTime(routeCopy.size()-1, 0));
+                List<Float> timeWindow;
+                if(!routeCopy.isEmpty()) {
+                    timeWindow = getTimeWindowOfTheNextPatient(routeCopy.get(routeCopy.size() - 1), patient, routeCopyDuration);
+                }else{
+                    timeWindow = getTimeWindowOfTheNextPatient(0, patient, 0);
+                }
+                routeCopyDuration = timeWindow.get(1) +jsonUtils.getTravelTime(patient, 0);
+                nurseDemands = parent1NursesDemands.get(i) + jsonUtils.getPatientDemand(patient);
+                if(routeCopyDuration<route0CopyGainDuration & routeCopyDuration<=jsonUtils.getReturnTime() & nurseDemands <=jsonUtils.getCapacityNurses()){
+                    route0CopyGainDuration = routeCopyDuration;
+                    routeIndex=i;
+                }
+            }
+
+            if(routeIndex==-1){
+                return crossoverVisma(otherParent);
+            }
+
+            parent1NursesRoutes.get(routeIndex).add(patient);
+            parent1NursesDemands.set(routeIndex,nurseDemands);
+            parent1NursesRoutesDurations.set(routeIndex,route0CopyGainDuration);
         }
+
+        for(int patient : removePatientParent2){
+            int routeIndex = -1;
+            int nurseDemands= Integer.MAX_VALUE;
+            float routeCopyDuration;
+            float route0CopyDuration = Float.POSITIVE_INFINITY;
+            for(int i = 0;i<parent2NursesRoutes.size();i++) {
+                List<Integer> routeCopy = new ArrayList<>(parent2NursesRoutes.get(i));
+                routeCopyDuration = parent2NursesRoutesDurations.get(i)- (routeCopy.isEmpty() ? 0 : jsonUtils.getTravelTime(routeCopy.size()-1, 0));
+                List<Float> timeWindow;
+                if(!routeCopy.isEmpty()) {
+                    timeWindow = getTimeWindowOfTheNextPatient(routeCopy.get(routeCopy.size() - 1), patient, routeCopyDuration);
+                }else{
+                    timeWindow = getTimeWindowOfTheNextPatient(0, patient, 0);
+                }
+                routeCopyDuration = timeWindow.get(1) +jsonUtils.getTravelTime(patient, 0);
+                nurseDemands = parent2NursesDemands.get(i) + jsonUtils.getPatientDemand(patient);
+                if(routeCopyDuration<route0CopyDuration & routeCopyDuration<=jsonUtils.getReturnTime() & nurseDemands <=jsonUtils.getCapacityNurses()){
+                    route0CopyDuration = routeCopyDuration;
+                    routeIndex=i;
+                }
+            }
+
+            if(routeIndex==-1){
+                return crossoverVisma(otherParent);
+            }
+
+            parent2NursesRoutes.get(routeIndex).add(patient);
+            parent2NursesDemands.set(routeIndex,nurseDemands);
+            parent2NursesRoutesDurations.set(routeIndex,route0CopyDuration);
+        }*/
+
+        /*for(int patient : removePatientParent2) {
+            int routeIndex = -1;
+            float routetravelTime = Float.POSITIVE_INFINITY;
+
+            float routetravelTime2;
+
+            for (int i = 0; i < parent2NursesRoutes.size(); i++) {
+                List<Integer> route0Copy = new ArrayList<>(parent2NursesRoutes.get(i));
+                route0Copy.add(patient);
+                List<List<Integer>> only1Route = new ArrayList<>();
+                only1Route.add(route0Copy);
+                try {
+                    Individual routeIndividual = new Individual(only1Route);
+                    routetravelTime2 = routeIndividual.getTravelTimeSum();
+                    if (routetravelTime2 < routetravelTime) {
+                        routeIndex = i;
+                        routetravelTime = routetravelTime2;
+                    }
+                } catch (Exception e) {
+
+                }
+
+                i++;
+            }
+            if(routeIndex!=-1){
+                parent1NursesRoutes.get(routeIndex).add(patient);
+            }
+            else{
+                return crossoverVisma(otherParent);
+            }
+        }
+
+        for(int patient : removePatientParent1) {
+            int routeIndex = -1;
+            float routetravelTime = Float.POSITIVE_INFINITY;
+
+            float routetravelTime2;
+
+            for (int i = 0; i < parent1NursesRoutes.size(); i++) {
+                List<Integer> route0Copy = new ArrayList<>(parent1NursesRoutes.get(i));
+                route0Copy.add(patient);
+                List<List<Integer>> only1Route = new ArrayList<>();
+                only1Route.add(route0Copy);
+                try {
+                    Individual routeIndividual = new Individual(only1Route);
+                    routetravelTime2 = routeIndividual.getTravelTimeSum();
+                    if (routetravelTime2 < routetravelTime) {
+                        routeIndex = i;
+                        routetravelTime = routetravelTime2;
+                    }
+                } catch (Exception e) {
+
+                }
+
+                i++;
+            }
+            if(routeIndex!=-1){
+
+                parent1NursesRoutes.get(routeIndex).add(patient);
+            }
+            else{
+                return crossoverVisma(otherParent);
+            }
+        }*/
 
         List<Individual> childs = new ArrayList<>();
         childs.add(new Individual(parent1NursesRoutes));
-        childs.add(new Individual(parent2NursesRoutes));
+        childs.add(new  Individual(parent2NursesRoutes));
         return childs;
     }
 

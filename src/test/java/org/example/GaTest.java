@@ -31,7 +31,7 @@ public class GaTest extends TestCase {
     }
 
     public void testTestRun() throws Exception {
-        ga.run(1000);
+        ga.run(30);
         System.out.println(ga.pop.get(0).getTravelTimeSum());
         System.out.println(ga.pop.get(0).getNursesRoutes());
         System.out.println(ga.pop.get(0).getAllocatablePatients());
