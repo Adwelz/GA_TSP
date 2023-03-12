@@ -9,7 +9,7 @@ import java.util.List;
 
 public class GaTest extends TestCase {
 
-    Ga ga = new Ga(500, 0.5f, 0.5f);
+    Ga ga = new Ga(200, 0.5f, 0f);
 
     public GaTest() throws IOException, ParseException {
 

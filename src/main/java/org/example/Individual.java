@@ -238,8 +238,8 @@ public class Individual{
                 if(closestNeighborsUnseen.isEmpty()){
                     break;
                 }
-                if(closestNeighborsUnseen.size()>5) {
-                    nextPatient = closestNeighborsUnseen.remove(r.nextInt(6));
+                if(closestNeighborsUnseen.size()>1) {
+                    nextPatient = closestNeighborsUnseen.remove(r.nextInt(2));
                 }
                 else {
                     nextPatient = closestNeighborsUnseen.remove(0);
@@ -540,143 +540,160 @@ public class Individual{
                 }
             }}
 
-        for(int patient : removePatientParent1){
-            int insertIndex =-1;
-            int routeIndex=-1;
-            int i = 0;
-            int j = 0;
-            while(insertIndex==-1 | routeIndex==-1) {
-                List<Integer> neighborsPatient = getNeighbors(patient);//.subList(0,10);
-                if(i==j){
-                    i = 0;
-                    j++;
-                }
-                int patient1 = neighborsPatient.get(i);
-
-                List<Integer> neighborsPatient1 = getNeighbors(patient1);
-                int patient2 = neighborsPatient1.get(j);
-
-                for (int k = 0; k < parent1NursesRoutes.size(); k++) {
-                    List<Integer> route = parent1NursesRoutes.get(k);
-                    if (patient1 == 0) {
-                        if (route.contains(patient2)) {
-                            int index2 = route.indexOf(patient2);
-                            if (index2 == route.size() - 1) {
-                                insertIndex = route.size();
-                            }
-                            if (index2 == 0) {
-                                insertIndex = 0;
-                            }
-                        }
-                    }
-                    if (patient2 == 0) {
-                        if (route.contains(patient1)) {
-                            int index1 = route.indexOf(patient1);
-                            if (index1 == route.size() - 1) {
-                                insertIndex = route.size();
-                            }
-                            if (index1 == 0) {
-                                insertIndex = 0;
-                            }
-                        }
-                    }
-                    if (route.contains(patient1) & route.contains(patient2)) {
-                        int index1 = route.indexOf(patient1);
-                        int index2 = route.indexOf(patient2);
-                        if (index2 > index1) {
-                            insertIndex = r.nextInt(index1, index2+1);
-                        } else {
-                            insertIndex = r.nextInt(index2, index1+1);
-                        }
-                    }
-
-                    if (insertIndex != -1) {
-                        try {
-                            List<Integer> routeCopy = new ArrayList<>(route);
-                            routeCopy.add(insertIndex,patient);
-                            List<List<Integer>> only1Route = new ArrayList<>();
-                            only1Route.add(routeCopy);
-                            new Individual(only1Route);
-                            routeIndex = k;
-                            break;
-                        } catch (Exception e) {
-
-                        }
-                    }
-                }
-                i++;
-            }
-            parent1NursesRoutes.get(routeIndex).add(insertIndex,patient);
+        /*List<Integer> list = new ArrayList<>();
+        int index11 = parent1NursesRoutes.indexOf(list);
+        if(index11!=-1) {
+            parent1NursesRoutes.set(index11, removePatientParent1);
         }
 
-        for(int patient : removePatientParent2){
-            int insertIndex =-1;
-            int routeIndex=-1;
-            int i = 0;
-            int j =1;
-            while(insertIndex==-1 | routeIndex==-1) {
-                List<Integer> neighborsPatient = getNeighbors(patient);//.subList(0,10);
-                if(i==j){
-                    i = 0;
-                    j++;
-                }
-
-                int patient1 = neighborsPatient.get(i);
-
-                int patient2 = neighborsPatient.get(j);
-
-                for (int k = 0; k < parent2NursesRoutes.size(); k++) {
-                    List<Integer> route = parent2NursesRoutes.get(k);
-                    if (patient1 == 0) {
-                        if (route.contains(patient2)) {
-                            int index2 = route.indexOf(patient2);
-                            if (index2 == route.size() - 1) {
-                                insertIndex = route.size();
-                            }
-                            if (index2 == 0) {
-                                insertIndex = 0;
-                            }
-                        }
-                    }
-                    if (patient2 == 0) {
-                        if (route.contains(patient1)) {
-                            int index1 = route.indexOf(patient1);
-                            if (index1 == route.size() - 1) {
-                                insertIndex = route.size();
-                            }
-                            if (index1 == 0) {
-                                insertIndex = 0;
-                            }
-                        }
-                    }
-                    if (route.contains(patient1) & route.contains(patient2)) {
-                        int index1 = route.indexOf(patient1);
-                        int index2 = route.indexOf(patient2);
-                        if (index2 > index1) {
-                            insertIndex = r.nextInt(index1, index2+1);
-                        } else {
-                            insertIndex = r.nextInt(index2, index1+1);
-                        }
-                    }
-
-                    if (insertIndex != -1) {
-                        try {
-                            List<Integer> routeCopy = new ArrayList<>(route);
-                            routeCopy.add(insertIndex,patient);
-                            List<List<Integer>> only1Route = new ArrayList<>();
-                            only1Route.add(routeCopy);
-                            new Individual(only1Route);
-                            routeIndex = k;
-                            break;
-                        } catch (Exception e) {
-
-                        }
-                    }
-                }
-                i++;
-            }
-            parent2NursesRoutes.get(routeIndex).add(insertIndex,patient);
+        int index21 = parent2NursesRoutes.indexOf(list);
+        if(index21!=-1) {
+            parent2NursesRoutes.set(index21, removePatientParent2);
         }
+
+        if(index11==-1 & index21==-1) {*/
+            for (int patient : removePatientParent1) {
+                int insertIndex = -1;
+                int routeIndex = -1;
+                int i = 0;
+                int j = 0;
+                while (insertIndex == -1 | routeIndex == -1) {
+                    List<Integer> neighborsPatient = getNeighbors(patient);
+                    if (i == j) {
+                        i = 0;
+                        j++;
+                    }
+                    int patient1 = neighborsPatient.get(i);
+
+                    List<Integer> neighborsPatient1 = getNeighbors(patient1);
+                    int patient2 = neighborsPatient1.get(j);
+
+                    for (int k = 0; k < parent1NursesRoutes.size(); k++) {
+                        List<Integer> route = parent1NursesRoutes.get(k);
+                        if (patient1 == 0) {
+                            if (route.contains(patient2)) {
+                                int index2 = route.indexOf(patient2);
+                                if (index2 == route.size() - 1) {
+                                    insertIndex = route.size();
+                                }
+                                if (index2 == 0) {
+                                    insertIndex = 0;
+                                }
+                            }
+                        }
+                        if (patient2 == 0) {
+                            if (route.contains(patient1)) {
+                                int index1 = route.indexOf(patient1);
+                                if (index1 == route.size() - 1) {
+                                    insertIndex = route.size();
+                                }
+                                if (index1 == 0) {
+                                    insertIndex = 0;
+                                }
+                            }
+                        }
+                        if (route.contains(patient1) & route.contains(patient2)) {
+                            int index1 = route.indexOf(patient1);
+                            int index2 = route.indexOf(patient2);
+                            if (index2 > index1) {
+                                insertIndex = r.nextInt(index1, index2 + 1);
+                            } else {
+                                insertIndex = r.nextInt(index2, index1 + 1);
+                            }
+                        }
+
+                        if (insertIndex != -1) {
+                            try {
+                                List<Integer> routeCopy = new ArrayList<>(route);
+                                routeCopy.add(insertIndex, patient);
+                                List<List<Integer>> only1Route = new ArrayList<>();
+                                only1Route.add(routeCopy);
+                                new Individual(only1Route);
+                                routeIndex = k;
+                                break;
+                            } catch (Exception e) {
+
+                            }
+                        }
+                    }
+                    i++;
+                }
+                List<Integer> ro =new ArrayList<>(parent1NursesRoutes.get(routeIndex));
+                ro.add(insertIndex, patient);
+                parent1NursesRoutes.set(routeIndex,ro);
+            }
+
+            for (int patient : removePatientParent2) {
+                int insertIndex = -1;
+                int routeIndex = -1;
+                int i = 0;
+                int j = 1;
+                while (insertIndex == -1 | routeIndex == -1) {
+                    List<Integer> neighborsPatient = getNeighbors(patient);
+                    if (i == j) {
+                        i = 0;
+                        j++;
+                    }
+
+                    int patient1 = neighborsPatient.get(i);
+
+                    int patient2 = neighborsPatient.get(j);
+
+                    for (int k = 0; k < parent2NursesRoutes.size(); k++) {
+                        List<Integer> route = parent2NursesRoutes.get(k);
+                        if (patient1 == 0) {
+                            if (route.contains(patient2)) {
+                                int index2 = route.indexOf(patient2);
+                                if (index2 == route.size() - 1) {
+                                    insertIndex = route.size();
+                                }
+                                if (index2 == 0) {
+                                    insertIndex = 0;
+                                }
+                            }
+                        }
+                        if (patient2 == 0) {
+                            if (route.contains(patient1)) {
+                                int index1 = route.indexOf(patient1);
+                                if (index1 == route.size() - 1) {
+                                    insertIndex = route.size();
+                                }
+                                if (index1 == 0) {
+                                    insertIndex = 0;
+                                }
+                            }
+                        }
+                        if (route.contains(patient1) & route.contains(patient2)) {
+                            int index1 = route.indexOf(patient1);
+                            int index2 = route.indexOf(patient2);
+                            if (index2 > index1) {
+                                insertIndex = r.nextInt(index1, index2 + 1);
+                            } else {
+                                insertIndex = r.nextInt(index2, index1 + 1);
+                            }
+                        }
+
+                        if (insertIndex != -1) {
+                            try {
+                                List<Integer> routeCopy = new ArrayList<>(route);
+                                routeCopy.add(insertIndex, patient);
+                                List<List<Integer>> only1Route = new ArrayList<>();
+                                only1Route.add(routeCopy);
+                                new Individual(only1Route);
+                                routeIndex = k;
+                                break;
+                            } catch (Exception e) {
+
+                            }
+                        }
+                    }
+                    i++;
+                }
+                List<Integer> ro =new ArrayList<>(parent2NursesRoutes.get(routeIndex));
+                ro.add(insertIndex, patient);
+                parent2NursesRoutes.set(routeIndex,ro);
+            }
+        //}
 
         /*Individual parent1WithoutSomeElement = new Individual(parent1NursesRoutes);
         Individual parent2WithoutSomeElement = new Individual(parent2NursesRoutes);

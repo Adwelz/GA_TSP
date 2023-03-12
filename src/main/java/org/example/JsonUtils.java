@@ -19,7 +19,7 @@ public class JsonUtils {
 
     public JsonUtils() throws IOException, ParseException {
         JSONParser parser = new JSONParser();
-        Reader reader = new FileReader("/Users/antoine/Documents/Project2/Instances to Project 2/train_9.json");
+        Reader reader = new FileReader("/Users/antoine/Documents/Project2/Instances to Project 2/train_0.json");
 
         Object jsonObj = parser.parse(reader);
         this.jsonObject = (JSONObject) jsonObj;

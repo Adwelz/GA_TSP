@@ -36,9 +36,13 @@ public class IndividualTest extends TestCase {
     public void testCrossover() throws Exception {
         Individual i1 = new Individual();
         Individual i2 = new Individual();
+        System.out.println(i1.getNursesRoutes());
+        System.out.println(i2.getNursesRoutes());
         List<Individual> childs = i1.crossoverVisma(i2);
         System.out.println(childs.get(0).getNursesRoutes());
+        System.out.println(childs.get(0).getAllocatablePatients());
         System.out.println(childs.get(1).getNursesRoutes());
+        System.out.println(childs.get(1).getAllocatablePatients());
     }
 
     public void testGetClosestNeighbors() throws Exception {
