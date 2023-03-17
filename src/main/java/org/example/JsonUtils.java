@@ -5,21 +5,26 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import java.io.FileNotFoundException;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 public class JsonUtils {
-    private JSONObject jsonObject;
+    private final JSONObject jsonObject;
 
     private static JsonUtils single_instance = null;
 
     public JsonUtils() throws IOException, ParseException {
+        Properties appProps = new Properties();
+        appProps.load(new FileInputStream("/Users/antoine/Documents/Project2/src/main/resources/train_1.properties"));
+
+        String instanceFilePath = appProps.getProperty("instancePath");
+
         JSONParser parser = new JSONParser();
-        Reader reader = new FileReader("/Users/antoine/Documents/Project2/Instances to Project 2/train_0.json");
+        Reader reader = new FileReader(instanceFilePath);
 
         Object jsonObj = parser.parse(reader);
         this.jsonObject = (JSONObject) jsonObj;
@@ -90,40 +95,7 @@ public class JsonUtils {
     float getTravelTime(int i1, int i2){
         List<List<Double>> jsonTravelTimes = (JSONArray) jsonObject.get("travel_times");
 
-        return ((Double) jsonTravelTimes.get(i1).get(i2)).floatValue();
-    }
-
-    List<Float> getDurationTimeAndTimeViolationForOneStep(int previousPatient, int currentPatient, float previousDurationTime) {
-        float actualStartTime=previousDurationTime + getTravelTime(previousPatient, currentPatient);
-        float timeWindowViolation =0;
-
-        float expectedStartTime = getPatientStartTime(currentPatient);
-        float expectedEndTime = getPatientEndTime(currentPatient);
-
-        if (actualStartTime < expectedStartTime){
-            timeWindowViolation = expectedStartTime - actualStartTime;
-        }
-
-        float actualEndTime = actualStartTime;
-        if (actualStartTime > expectedStartTime) {
-            float waitingTime = actualStartTime - expectedStartTime;
-            actualEndTime += waitingTime + getPatientCareTime(currentPatient);
-        }
-        else {
-            actualEndTime += getPatientCareTime(currentPatient);
-        }
-
-        if (actualEndTime > expectedEndTime) {
-            timeWindowViolation = actualEndTime - expectedEndTime;
-        }
-
-        List<Float> durationTimeAndTimeWindowViolation = new ArrayList<>();
-
-        durationTimeAndTimeWindowViolation.add(actualEndTime);
-
-        durationTimeAndTimeWindowViolation.add(timeWindowViolation);
-
-        return durationTimeAndTimeWindowViolation;
+        return jsonTravelTimes.get(i1).get(i2).floatValue();
     }
 
 }
